@@ -5,13 +5,13 @@ import time
 import signal
 import numpy as np
 import math
+import matplotlib.pyplot as plt
 
 from shapely import points, centroid
 
 import miniball
 
 # from pkg_resources import require
-
 from piece_of_cake_state import PieceOfCakeState
 from constants import *
 import constants
@@ -435,6 +435,9 @@ class PieceOfCakeGame:
         if (action[0] == constants.INIT or action[0] == constants.CUT) and len(
             action[1]
         ) != 2:
+        if action[0] == constants.INIT and self.turns != 1:
+            return False
+        if (action[0] == constants.INIT or action[0] == constants.CUT) and len(action[1]) != 2:
             return False
         # Check if action[1] is a list of float values with maximum 2 decimal places
         if (action[0] == constants.INIT or action[0] == constants.CUT) and not all(
@@ -448,8 +451,35 @@ class PieceOfCakeGame:
             and len(action[1]) != len(set(action[1]))
         ):
             return False
+        # For assign action, check
+        # 1 if the length of the list is equal to the number of requests
+        # 2 All the values which are greater than -1 are unique
+        # 3 All the values are integers and greater than -1
+
+        if action[0] == constants.ASSIGN:
+            if len(action[1]) != len(self.requests):
+                return False
+            temp = [x for x in action[1] if x != -1]
+            if len(set(temp)) != len(temp):
+                return False
+            if not all(isinstance(x, int) and x >= -1 for x in action[1]):
+                return False
 
         return True
+
+    def invalid_knife_position(self, pos):
+        cur_x, cur_y = pos
+        if (cur_x != 0 and cur_x != self.cake_width) and (cur_y != 0 and cur_y != self.cake_len):
+            return True
+
+        if cur_x == 0 or cur_x == self.cake_width:
+            if cur_y < 0 or cur_y > self.cake_len:
+                return True
+
+        if cur_y == 0 or cur_y == self.cake_len:
+            if cur_x < 0 or cur_x > self.cake_width:
+                return True
+        return False
 
     def check_and_apply_action(self, action):
         if action[0] == constants.INIT:
@@ -457,6 +487,7 @@ class PieceOfCakeGame:
             if (cur_x != 0 and cur_x != self.cake_width) and (
                 cur_y != 0 and cur_y != self.cake_width
             ):
+            if self.invalid_knife_position(action[1]):
                 return False
             self.cur_pos = action[1]
             return True
@@ -468,6 +499,7 @@ class PieceOfCakeGame:
             if (cur_x != 0 and cur_x != self.cake_width) and (
                 cur_y != 0 and cur_y != self.cake_len
             ):
+            if self.invalid_knife_position(action[1]):
                 return False
 
             # If the next position is same then the cut is invalid
